@@ -1,80 +1,55 @@
-terraform {
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~>4.0"
-    }
+provider "aws" {
+  region = var.aws_region
+}
+
+#Create security group with firewall rules
+resource "aws_security_group" "my_security_group" {
+  name        = var.security_group
+  description = "security group for Ec2 instance"
+
+  ingress {
+    from_port   = 8080
+    to_port     = 8080
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
-}
-provider "aws" {
-  region = var.region
-}
-resource "aws_instance" "servernode" {
-  ami                    = "ami-052efd3df9dad4825"
-  instance_type          = "t2.micro"
-  key_name               = aws_key_pair.deployer.key_name
-  vpc_security_group_ids = [aws_security_group.maingroup.id]
-  iam_instance_profile   = aws_iam_instance_profile.ec2-profile.name
-  connection {
-    type        = "ssh"
-    host        = self.public_ip
-    user        = "ubuntu"
-    private_key = var.private_key
-    timeout     = "4m"
+ ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
   }
-  tags = {
-    "name" = "DeployVM"
+
+ # outbound from jenkis server
+  egress {
+    from_port   = 0
+    to_port     = 65535
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags= {
+    Name = var.security_group
   }
 }
-resource "aws_iam_instance_profile" "ec2-profile" {
-  name = "ec2-profile"
-  role = "ECR-LOGIN-AUTO"
+
+# Create AWS ec2 instance
+resource "aws_instance" "myFirstInstance" {
+  ami           = var.ami_id
+  key_name = var.key_name
+  instance_type = var.instance_type
+  security_groups= [var.security_group]
+  tags= {
+    Name = var.tag_name
+  }
 }
-resource "aws_security_group" "maingroup" {
-  egress = [
-    {
-      cidr_blocks      = ["0.0.0.0/0"]
-      description      = ""
-      from_port        = 0
-      ipv6_cidr_blocks = []
-      prefix_list_ids  = []
-      protocol         = "-1"
-      security_groups  = []
-      self             = false
-      to_port          = 0
-    }
-  ]
-  ingress = [
-    {
-      cidr_blocks      = ["0.0.0.0/0", ]
-      description      = ""
-      from_port        = 22
-      ipv6_cidr_blocks = []
-      prefix_list_ids  = []
-      protocol         = "tcp"
-      security_groups  = []
-      self             = false
-      to_port          = 22
-    },
-    {
-      cidr_blocks      = ["0.0.0.0/0", ]
-      description      = ""
-      from_port        = 80
-      ipv6_cidr_blocks = []
-      prefix_list_ids  = []
-      protocol         = "tcp"
-      security_groups  = []
-      self             = false
-      to_port          = 80
-    }
-  ]
-}
-resource "aws_key_pair" "deployer" {
-  key_name   = var.key_name
-  public_key = var.public_key
-}
-output "instance_public_ip" {
-  value     = aws_instance.servernode.public_ip
-  sensitive = true
+
+# Create Elastic IP address
+resource "aws_eip" "myFirstInstance" {
+  vpc      = true
+  instance = aws_instance.myFirstInstance.id
+tags= {
+    Name = "my_elastic_ip"
+  }
 }
