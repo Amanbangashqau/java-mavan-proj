@@ -36,6 +36,7 @@
    tags = {
      Name = "Terraform EC2 - using tls_private_key module"
    }
+   user_data = file("file.sh")
    
    #3. Connection Block-
    connection {
