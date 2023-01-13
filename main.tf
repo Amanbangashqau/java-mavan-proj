@@ -24,27 +24,3 @@
    }
  }
  
- # 1. EC2 Instance 
- resource "aws_instance" "ec2_example" {
- 
-   ami = "ami-0767046d1677be5a0"
-   instance_type = "t2.micro"
-
-   # 2. Key Name
-   # Specify the key name and it should match with key_name from the resource "aws_key_pair"
-   key_name= "aws_keys_pairs"
-   tags = {
-     Name = "Terraform EC2 - using tls_private_key module"
-   }
-   
-   #3. Connection Block-
-   connection {
-     type        = "ssh"
-     host        = self.public_ip
-     user        = "ubuntu"
-     
-     # Mention the exact private key name which will be generated 
-     private_key = file("aws_keys_pairs.pem")
-     timeout     = "4m"
-   }
- }
