@@ -1,5 +1,5 @@
  provider "aws" {
-   region = "eu-west-2"
+   region = "eu-central-1"
  }
  
  resource "tls_private_key" "terrafrom_generated_private_key" {
