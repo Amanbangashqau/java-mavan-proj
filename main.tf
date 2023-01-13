@@ -38,7 +38,7 @@
    }
    vpc_security_group_ids = [aws_security_group.maingroup.id]
    user_data = file("file.sh")
-   docker_compose_str = var.example_docker_compose
+   
    
    #3. Connection Block-
    connection {
