@@ -1,55 +1,50 @@
-provider "aws" {
-  region = var.aws_region
-}
+ provider "aws" {
+   region = "eu-central-1"
+ }
+ 
+ resource "tls_private_key" "terrafrom_generated_private_key" {
+   algorithm = "RSA"
+   rsa_bits  = 4096
+ }
+ 
+ resource "aws_key_pair" "generated_key" {
+ 
+   # Name of key: Write the custom name of your key
+   key_name   = "aws_keys_pairs"
+ 
+   # Public Key: The public will be generated using the reference of tls_private_key.terrafrom_generated_private_key
+   public_key = tls_private_key.terrafrom_generated_private_key.public_key_openssh
+ 
+   # Store private key :  Generate and save private key(aws_keys_pairs.pem) in current directory
+   provisioner "local-exec" {
+     command = <<-EOT
+       echo '${tls_private_key.terrafrom_generated_private_key.private_key_pem}' > aws_keys_pairs.pem
+       chmod 400 aws_keys_pairs.pem
+     EOT
+   }
+ }
+ 
+ # 1. EC2 Instance 
+ resource "aws_instance" "ec2_example" {
+ 
+   ami = "ami-0767046d1677be5a0"
+   instance_type = "t2.micro"
 
-#Create security group with firewall rules
-resource "aws_security_group" "my_security_group" {
-  name        = var.security_group
-  description = "security group for Ec2 instance"
-
-  ingress {
-    from_port   = 8080
-    to_port     = 8080
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
- ingress {
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
- # outbound from jenkis server
-  egress {
-    from_port   = 0
-    to_port     = 65535
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  tags= {
-    Name = var.security_group
-  }
-}
-
-# Create AWS ec2 instance
-resource "aws_instance" "myFirstInstance" {
-  ami           = var.ami_id
-  key_name = var.key_name
-  instance_type = var.instance_type
-  security_groups= [var.security_group]
-  tags= {
-    Name = var.tag_name
-  }
-}
-
-# Create Elastic IP address
-resource "aws_eip" "myFirstInstance" {
-  vpc      = true
-  instance = aws_instance.myFirstInstance.id
-tags= {
-    Name = "my_elastic_ip"
-  }
-}
+   # 2. Key Name
+   # Specify the key name and it should match with key_name from the resource "aws_key_pair"
+   key_name= "aws_keys_pairs"
+   tags = {
+     Name = "Terraform EC2 - using tls_private_key module"
+   }
+   
+   #3. Connection Block-
+   connection {
+     type        = "ssh"
+     host        = self.public_ip
+     user        = "ubuntu"
+     
+     # Mention the exact private key name which will be generated 
+     private_key = file("aws_keys_pairs.pem")
+     timeout     = "4m"
+   }
+ }
